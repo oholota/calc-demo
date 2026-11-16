@@ -30,3 +30,9 @@ def calculate(request):
     except CalcError as exc:
         return JsonResponse({"expression": expression, "error": str(exc)}, status=400)
     return JsonResponse({"expression": expression, "result": result})
+
+
+@require_GET
+def healthz(request):
+    """Liveness/readiness check for Docker HEALTHCHECK and Kubernetes probes."""
+    return JsonResponse({"status": "ok"})
