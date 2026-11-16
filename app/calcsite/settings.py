@@ -1,7 +1,7 @@
 """
 Django settings for the calc project.
 
-Written for Django 5.1.
+Written for Django 5.2 LTS.
 """
 import os
 from pathlib import Path
