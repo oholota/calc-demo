@@ -43,8 +43,33 @@ pytest tests/http --base-url http://127.0.0.1:8000     # against the running app
 | Test | every push and pull request | unit tests, builds the image, starts it, HTTP tests against the container |
 | Publish | push to main | pushes the tested image to GitHub Container Registry (`ghcr.io/<owner>/<repo>`) |
 | Deploy | push to main | creates a throwaway Kubernetes cluster (kind), deploys the image by digest, smoke test |
+| AI summary | pull requests | an LLM comments the pull request with a short summary and risks |
 
-Nothing to configure: the pipeline uses only the built-in `GITHUB_TOKEN`.
+Nothing to configure for test, publish and deploy: they use only the
+built-in `GITHUB_TOKEN`.
+
+## AI assistant (optional)
+
+`tools/ai_assist.py` asks an LLM to explain a failed test job (the answer is
+in the job summary) and to summarize pull requests (a PR comment). Any
+OpenAI-compatible API works. Settings -> Secrets and variables -> Actions:
+
+| Name | Kind | Example |
+|---|---|---|
+| `AI_BASE_URL` | variable | `https://<resource>.openai.azure.com/openai/v1` (Azure OpenAI), `https://api.openai.com/v1` |
+| `AI_MODEL` | variable | `gpt-5-mini` (for Azure: the deployment name) |
+| `AI_API_KEY` | secret | the API key |
+
+Without them the AI steps print "not configured" and the pipeline is
+unaffected. The assistant only advises: it never fails or blocks a run, and it
+receives test output, app logs and the diff, never secrets.
+
+Try it locally:
+
+```bash
+export AI_BASE_URL=... AI_MODEL=... AI_API_KEY=...
+python3 tools/ai_assist.py explain test-output.log
+```
 
 `deploy-cloudrun.yml` is an optional manual workflow for a Google Cloud
 project (needs `GCP_PROJECT_ID`, `GCP_REGION` variables and a `GCP_CREDENTIALS` secret).
@@ -61,3 +86,4 @@ The history is tagged so the demo can go one step at a time:
 | `step-3-ci` | CI: tests and image build on every push |
 | `step-4-publish` | publish the tested image to GHCR |
 | `step-5-deploy` | deploy to Kubernetes with a smoke test |
+| `step-6-ai` | AI assistant: explains failed runs, summarizes pull requests |

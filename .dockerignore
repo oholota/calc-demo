@@ -8,3 +8,4 @@ app/staticfiles
 tests
 k8s
 *.md
+tools
