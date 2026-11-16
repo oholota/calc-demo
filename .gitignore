@@ -4,3 +4,7 @@ __pycache__/
 venv/
 .pytest_cache/
 app/staticfiles/
+# written by the pipeline for the AI assistant
+*.log
+*.diff
+summary.md
