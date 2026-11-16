@@ -11,7 +11,7 @@ from .engine import CalcError, evaluate
 
 @require_GET
 def index(request):
-    footer = format_html("Practice app for <b>DEV-017 DevOps Basics</b>")
+    footer = format_html("Practice app for <b>{}</b>", "DEV-017 DevOps Basics")
     return render(request, "calculator/index.html", {"footer": footer})
 
 
