@@ -26,3 +26,11 @@ pip install -r requirements.txt
 cd app
 python manage.py runserver
 ```
+
+## Tests
+
+```bash
+pip install -r requirements-dev.txt
+pytest tests/unit                                      # logic only, no server
+pytest tests/http --base-url http://127.0.0.1:8000     # against the running app
+```
