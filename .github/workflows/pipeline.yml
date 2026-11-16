@@ -107,3 +107,56 @@ jobs:
           echo "image=$digest" >> "$GITHUB_OUTPUT"
           echo "Published $image:$tag" >> "$GITHUB_STEP_SUMMARY"
           echo "Digest: \`$digest\`" >> "$GITHUB_STEP_SUMMARY"
+
+  deploy:
+    name: Deploy
+    needs: publish
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      # A throwaway Kubernetes cluster inside the runner. A real target
+      # (AKS, EKS, GKE) differs only in how kubectl gets its credentials.
+      - name: Create a Kubernetes cluster (kind)
+        uses: helm/kind-action@ea822c7bf1874f08e5a491df991c228edffc3376 # v1.15.2
+        with:
+          cluster_name: demo
+
+      - name: Create secrets in the cluster
+        env:
+          TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          kubectl create secret docker-registry ghcr \
+            --docker-server=ghcr.io \
+            --docker-username="${{ github.actor }}" \
+            --docker-password="$TOKEN"
+          kubectl create secret generic calc \
+            --from-literal=secret-key="$(openssl rand -hex 32)"
+
+      - name: Deploy the published image
+        env:
+          IMAGE: ${{ needs.publish.outputs.image }}
+        run: |
+          sed "s|IMAGE_FROM_PIPELINE|$IMAGE|" k8s/deployment.yaml | kubectl apply -f -
+          kubectl apply -f k8s/service.yaml
+          kubectl rollout status deployment/calc --timeout=180s
+
+      - name: Smoke test
+        run: |
+          kubectl port-forward service/calc 8080:80 >/dev/null 2>&1 &
+          sleep 3
+          curl -fsS http://127.0.0.1:8080/healthz
+          echo
+          answer=$(curl -fsS -X POST http://127.0.0.1:8080/api/calc \
+            -H "Content-Type: application/json" -d '{"expression": "6*7"}')
+          echo "$answer"
+          echo "$answer" | grep -q '"result": 42'
+
+      - name: What is running
+        if: always()
+        run: |
+          kubectl get deployments,replicasets,pods,services -o wide
+          kubectl describe deployment calc | tail -n 20
